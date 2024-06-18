@@ -21,11 +21,11 @@
                             </tr>
                             <tr>
                                 <td>MERK BARANG</td>
-                                <td>{{ $rsetBarangkeluar->barang->merk }}</td>
+                                <td>{{ $rsetBarangkeluar->merk }}</td>
                             </tr>
                             <tr>
                                 <td>SERI BARANG</td>
-                                <td>{{ $rsetBarangkeluar->barang->seri }}</td>
+                                <td>{{ $rsetBarangkeluar->seri }}</td>
                             </tr>
                         </table>
                     </div>

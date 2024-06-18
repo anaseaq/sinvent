@@ -9,24 +9,15 @@ use App\Models\Kategori;
 class Barang extends Model
 {
     use HasFactory;
-
-    protected $table = 'barang'; // Sesuaikan dengan nama tabel yang benar
-
+    protected $table = 'barang';
     protected $fillable = ['merk', 'seri', 'spesifikasi', 'stok', 'kategori_id', 'foto'];
 
     public function kategori()
-    {
-        return $this->belongsTo(Kategori::class, 'kategori_id');
-    }
+    { return $this->belongsTo(Kategori::class, 'kategori_id'); }
 
-    // Uncomment jika diperlukan
     public function barangkeluar()
-    {
-        return $this->hasMany(Barangkeluar::class);
-    }
+    { return $this->hasMany(Barangkeluar::class); }
 
     public function barangmasuk()
-    {
-        return $this->hasMany(Barangmasuk::class);
-    }
+    { return $this->hasMany(Barangmasuk::class); }
 }

@@ -10,16 +10,31 @@ use Illuminate\Support\Facades\DB;
 
 class BarangController extends Controller
 {
-    // No need to explicitly use ValidatesRequests, it's already in the base Controller
 
     public function index(Request $request)
     {
-        // Menggunakan Eloquent untuk mengambil data dengan relasi dan pagination
-        $rsetBarang = Barang::with('kategori')->latest()->paginate(10);
+        $search = $request->query('search');
+        $query = Barang::with('kategori');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('merk', 'LIKE', "%{$search}%")
+                ->orWhere('seri', 'LIKE', "%{$search}%")
+                ->orWhere('stok', 'LIKE', "%{$search}%")
+                ->orWhere('spesifikasi', 'LIKE', "%{$search}%")
+                ->orWhereHas('kategori', function ($q) use ($search) {
+                    $q->where('kategori', 'LIKE', "%{$search}%")
+                    ->orWhere('jenis', 'LIKE', "%{$search}%");
+                });
+            });
+        }
+
+        $rsetBarang = $query->latest()->paginate(10);
 
         return view('barang.index', compact('rsetBarang'))
             ->with('i', (request()->input('page', 1) - 1) * 5);
     }
+
 
     public function create()
     {
@@ -30,7 +45,6 @@ class BarangController extends Controller
 
     public function store(Request $request)
     {
-        // Validate form
         $request->validate([
             'merk'          => 'required',
             'seri'          => 'required',
@@ -42,11 +56,9 @@ class BarangController extends Controller
         // Menggunakan transaksi untuk memastikan semua operasi berhasil atau tidak sama sekali
         DB::beginTransaction();
         try {
-            // Upload image
             $foto = $request->file('foto');
             $foto->storeAs('public/foto', $foto->hashName());
 
-            // Create barang menggunakan Eloquent
             Barang::create([
                 'merk'          => $request->merk,
                 'seri'          => $request->seri,
@@ -56,26 +68,30 @@ class BarangController extends Controller
             ]);
 
             DB::commit();
-            // Redirect to index
             return redirect()->route('barang.index')->with(['success' => 'Data Berhasil Disimpan!']);
         } catch (\Exception $e) {
             DB::rollBack();
-            // Handle the error
             return redirect()->back()->with(['error' => 'Data Gagal Disimpan!']);
         }
     }
 
     public function show(string $id)
     {
-        // Menggunakan Query Builder untuk mengambil satu barang
-        $rsetBarang = DB::table('barangs')->where('id', $id)->first();
+        $rsetBarang = DB::table('barang')
+            ->join('kategori', 'barang.kategori_id', '=', 'kategori.id')
+            ->select('barang.*', 'kategori.kategori as kategori_nama')
+            ->where('barang.id', $id)
+            ->first();
+
+        if (!$rsetBarang) {
+            abort(404);
+        }
 
         return view('barang.show', compact('rsetBarang'));
     }
 
     public function edit(string $id)
     {
-        // Menggunakan Eloquent untuk mengambil semua kategori dan barang berdasarkan ID
         $akategori = Kategori::all();
         $rsetBarang = Barang::findOrFail($id);
         $selectedKategori = Kategori::findOrFail($rsetBarang->kategori_id);
@@ -93,20 +109,16 @@ class BarangController extends Controller
             'foto'          => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
 
-        // Menggunakan Eloquent untuk mencari barang berdasarkan ID
         $rsetBarang = Barang::findOrFail($id);
 
         DB::beginTransaction();
         try {
             if ($request->hasFile('foto')) {
-                // Upload new image
                 $foto = $request->file('foto');
                 $foto->storeAs('public/foto', $foto->hashName());
 
-                // Delete old image
                 Storage::delete('public/foto/' . $rsetBarang->foto);
 
-                // Update barang dengan gambar baru
                 $rsetBarang->update([
                     'merk'          => $request->merk,
                     'seri'          => $request->seri,
@@ -115,7 +127,6 @@ class BarangController extends Controller
                     'foto'          => $foto->hashName()
                 ]);
             } else {
-                // Update barang tanpa gambar baru
                 $rsetBarang->update([
                     'merk'          => $request->merk,
                     'seri'          => $request->seri,
@@ -134,7 +145,6 @@ class BarangController extends Controller
 
     public function destroy(string $id)
     {
-        // Menggunakan Query Builder untuk mengecek keberadaan barang di tabel barangmasuk dan barangkeluar
         if (DB::table('barangmasuk')->where('barang_id', $id)->exists() ||
             DB::table('barangkeluar')->where('barang_id', $id)->exists()){
             return redirect()->route('barang.index')->with(['gagal' => 'Data Gagal Dihapus karena barang terdapat pada barangmasuk/barangkeluar']);

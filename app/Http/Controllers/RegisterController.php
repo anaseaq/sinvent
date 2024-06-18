@@ -4,23 +4,27 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
 class RegisterController extends Controller
 {
-    public function create(){
+    public function create()
+    {
         return view('register');
     }
 
-    public function store(Request $request){
+    public function store(Request $request)
+    {
         $validData = $request->validate([
             'name' => 'required|max:255',
             'email' => ['required','email','unique:users'],
             'password' => 'required|min:3|max:255'
         ]);
 
+        $validData['password'] = Hash::make($validData['password']);
+
         User::create($validData);
 
-        return redirect('login');
-
+        return redirect('login')->with('success', 'Akun berhasil dibuat. Silakan login.');
     }
-
 }

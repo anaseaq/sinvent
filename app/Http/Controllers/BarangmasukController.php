@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Barangmasuk;
 use App\Models\Barang;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class BarangmasukController extends Controller
 {
@@ -14,7 +15,7 @@ class BarangmasukController extends Controller
         $rsetBarangmasuk = Barangmasuk::with('barang')->latest()->paginate(10);
 
         return view('barangmasuk.index', compact('rsetBarangmasuk'))
-            ->with('i', (request()->input('page', 1) - 1) * 5);
+            ->with('i', (request()->input('page', 1) - 1) * 10);
     }
 
     public function create()
@@ -25,40 +26,52 @@ class BarangmasukController extends Controller
 
     public function store(Request $request)
     {
-        // validate form
         $request->validate([
             'tgl_masuk'    => 'required',
             'qty_masuk'    => 'required|numeric|min:1',
             'barang_id'    => 'required|not_in:blank',
         ]);
 
-        $existingEntry = Barangmasuk::where('tgl_masuk', $request->tgl_masuk)
-                                    ->where('barang_id', $request->barang_id)
-                                    ->first();
+        try {
+            DB::beginTransaction();
+
+            $existingEntry = Barangmasuk::where('tgl_masuk', $request->tgl_masuk)
+                                        ->where('barang_id', $request->barang_id)
+                                        ->lockForUpdate()
+                                        ->first();
 
             if ($existingEntry) {
-                // Jika entri ada, tambahkan qty_masuk
                 $existingEntry->qty_masuk += $request->qty_masuk;
                 $existingEntry->save();
             } else {
-                // Jika tidak ada, buat entri baru
                 Barangmasuk::create([
-                'tgl_masuk'    => $request->tgl_masuk,
-                'qty_masuk'    => $request->qty_masuk,
-                'barang_id'    => $request->barang_id
+                    'tgl_masuk'    => $request->tgl_masuk,
+                    'qty_masuk'    => $request->qty_masuk,
+                    'barang_id'    => $request->barang_id
                 ]);
             }
 
+            DB::commit();
 
-        // redirect to index
-        return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Disimpan!']);
+            return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Disimpan!']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])->withInput();
+        }
     }
 
     public function show(string $id)
     {
-        $rsetBarangmasuk = Barangmasuk::findOrFail($id);
+        $rsetBarangmasuk = DB::table('barangmasuk')
+            ->join('barang', 'barangmasuk.barang_id', '=', 'barang.id')
+            ->select('barangmasuk.*', 'barang.merk as merk', 'barang.seri as seri')
+            ->where('barangmasuk.id', $id)
+            ->first();
 
-        // return view
+        if (!$rsetBarangmasuk) {
+            abort(404); 
+        }
+
         return view('barangmasuk.show', compact('rsetBarangmasuk'));
     }
 
@@ -79,26 +92,40 @@ class BarangmasukController extends Controller
             'barang_id'    => 'required|not_in:blank',
         ]);
 
-        $rsetBarangmasuk = Barangmasuk::findOrFail($id);
+        try {
+            DB::beginTransaction();
 
-        $rsetBarangmasuk->update([
-            'tgl_masuk'    => $request->tgl_masuk,
-            'qty_masuk'    => $request->qty_masuk,
-            'barang_id'    => $request->barang_id
-        ]);
+            $rsetBarangmasuk = Barangmasuk::findOrFail($id);
 
-        // Redirect to the index page with a success message
-        return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Diubah!']);
+            $rsetBarangmasuk->update([
+                'tgl_masuk'    => $request->tgl_masuk,
+                'qty_masuk'    => $request->qty_masuk,
+                'barang_id'    => $request->barang_id
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Diubah!']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()])->withInput();
+        }
     }
 
     public function destroy(string $id)
     {
-        $rsetBarangmasuk = Barangmasuk::findOrFail($id);
+        try {
+            DB::beginTransaction();
 
-        // delete post
-        $rsetBarangmasuk->delete();
+            $rsetBarangmasuk = Barangmasuk::findOrFail($id);
+            $rsetBarangmasuk->delete();
 
-        // redirect to index
-        return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Dihapus!']);
+            DB::commit();
+
+            return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Dihapus!']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
+        }
     }
 }

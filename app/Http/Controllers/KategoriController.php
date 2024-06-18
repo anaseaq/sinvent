@@ -10,26 +10,27 @@ use Illuminate\Support\Facades\Validator;
 
 class KategoriController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $rsetKategori = Kategori::select('id', 'kategori', 'jenis', 
+        $search = $request->query('search');
+        $query = Kategori::select('id', 'kategori', 'jenis', 
             \DB::raw('(CASE
                 WHEN jenis = "M" THEN "Modal"
                 WHEN jenis = "A" THEN "Alat"
                 WHEN jenis = "BHP" THEN "Bahan Habis Pakai"
                 ELSE "Bahan Tidak Habis Pakai"
-                END) AS ketKategori'))
-            ->paginate(10);
+                END) AS ketKategori'));
+
+        if ($search) {
+            $query->where('kategori', 'LIKE', "%{$search}%")
+                ->orWhere('jenis', 'LIKE', "%{$search}%");
+        }
+
+        $rsetKategori = $query->paginate(10);
 
         return view('kategori.index', compact('rsetKategori'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $aKategori = [
@@ -43,9 +44,6 @@ class KategoriController extends Controller
         return view('kategori.create', compact('aKategori'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -58,27 +56,27 @@ class KategoriController extends Controller
                              ->withErrors($validator)
                              ->withInput();
         }
-    
-        Kategori::create([
-            'kategori' => $request->kategori,
-            'jenis' => $request->jenis,
-        ]);
-    
-        return redirect()->route('kategori.index')->with(['success' => 'Data Berhasil Disimpan!']);
+
+        DB::beginTransaction();
+        try {
+            Kategori::create([
+                'kategori' => $request->kategori,
+                'jenis' => $request->jenis,
+            ]);
+            DB::commit();
+            return redirect()->route('kategori.index')->with(['success' => 'Data Berhasil Disimpan!']);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with(['gagal' => 'Data Gagal Disimpan!'])->withInput();
+        }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
         $rsetKategori = Kategori::findOrFail($id);
         return view('kategori.show', compact('rsetKategori'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit($id)
     {
         $aKategori = [
@@ -94,9 +92,6 @@ class KategoriController extends Controller
         return view('kategori.edit', compact('rsetKategori', 'aKategori'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
@@ -111,29 +106,40 @@ class KategoriController extends Controller
                              ->withErrors($validator)
                              ->withInput();
         }
-        
-        $rsetKategori->update([
-            'kategori'  => $request->kategori,
-            'jenis'     => $request->jenis,
-        ]);
 
-        return redirect()->route('kategori.index')->with(['success' => 'Data berhasil diperbarui!']);
+        DB::beginTransaction();
+        try {
+            $rsetKategori->update([
+                'kategori'  => $request->kategori,
+                'jenis'     => $request->jenis,
+            ]);
+            DB::commit();
+            return redirect()->route('kategori.index')->with(['success' => 'Data berhasil diperbarui!']);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with(['gagal' => 'Data Gagal Diperbarui!'])->withInput();
+        }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
-        
-        if (DB::table('barang')->where('kategori_id', $id)->exists()){
-            return redirect()->route('kategori.index')->with(['gagal' => 'Data Gagal Dihapus!']);
-        } else {
-            $rsetKategori = Kategori::find($id);
-            $rsetKategori->delete();
-            return redirect()->route('kategori.index')->with(['success' => 'Data Berhasil Dihapus!']);
-        }
+        $existsInBarang = DB::table('barang')
+                    ->where('kategori_id', $id)
+                    ->exists();
 
+        if ($existsInBarang) {
+            return redirect()->route('kategori.index')->with(['gagal' => 'Data Gagal Dihapus Karena Kategori digunakan']);
+        } else {
+            $deleted = DB::table('kategori')
+                        ->where('id', $id)
+                        ->delete();
+
+            if ($deleted) {
+                return redirect()->route('kategori.index')->with(['success' => 'Data Berhasil Dihapus!']);
+            } else {
+                return redirect()->route('kategori.index')->with(['gagal' => 'Data Gagal Dihapus!']);
+            }
+        }
     }
     
     private function normalizeIds() 
@@ -147,7 +153,6 @@ class KategoriController extends Controller
             $counter++;
         }
 
-        // Mengatur ulang auto-increment
         DB::statement('ALTER TABLE kategori AUTO_INCREMENT = ' . ($counter) . ';');
     }
 }

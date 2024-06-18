@@ -29,7 +29,7 @@
                             </tr>
                             <tr>
                                 <td>KATEGORI</td>
-                                <td>{{ $rsetBarang->kategori->kategori }}</td>
+                                <td>{{ $rsetBarang->kategori_nama }}</td>
                             </tr>
                         </table>
                     </div>

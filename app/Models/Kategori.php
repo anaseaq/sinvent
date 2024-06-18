@@ -10,14 +10,9 @@ class Kategori extends Model
     use HasFactory;
     protected $table = 'kategori';
 
-    protected $fillable = [
-        'id', // Tambahkan 'id' jika ingin memungkinkan perubahan id
-        'kategori',
-        'jenis',
-    ];
+    protected $fillable = ['id', 'kategori', 'jenis'];
+    
     public $incrementing = true; // Pastikan auto-incrementing diaktifkan
     public function barang()
-    {
-        return $this->hasMany(Barang::class);
-    }
+    { return $this->hasMany(Barang::class); }
 }

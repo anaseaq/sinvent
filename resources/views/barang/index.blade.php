@@ -1,29 +1,36 @@
 @extends('layouts.adm-main')
 
-
 @section('content')
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-		<div class="pull-left">
-		    <h2>DAFTAR BARANG</h2>
-		</div>
-        @if ($message = Session::get('success'))
-            <div class="alert alert-success">
-                <p>{{ $message }}</p>
-            </div>
-        @elseif ($message = Session::get('gagal'))
-            <div class="alert alert-warning">
-                <p>{{ $message }}</p>
-            </div>
-        @endif
+                <div class="pull-left">
+                    <h2>DAFTAR BARANG</h2>
+                </div>
+                @if ($message = Session::get('success'))
+                    <div class="alert alert-success">
+                        <p>{{ $message }}</p>
+                    </div>
+                @elseif ($message = Session::get('gagal'))
+                    <div class="alert alert-warning">
+                        <p>{{ $message }}</p>
+                    </div>
+                @endif
+
+                <!-- Form Pencarian -->
                 <div class="card">
                     <div class="card-body">
+                        <form action="{{ route('barang.index') }}" method="GET">
+                            <div class="input-group mb-3">
+                                <input type="text" name="search" class="form-control" placeholder="Cari barang" value="{{ request()->query('search') }}">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary" type="submit">Cari</button>
+                                </div>
+                            </div>
+                        </form>
                         <a href="{{ route('barang.create') }}" class="btn btn-md btn-success mb-3">TAMBAH ITEM</a>
                     </div>
-
                 </div>
-
 
                 <table class="table table-bordered">
                     <thead>
@@ -37,20 +44,18 @@
                             <th>KATEGORI</th>
                             <th>FOTO</th>
                             <th style="width: 15%">AKSI</th>
-
-
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($rsetBarang as $rowbarang)
                             <tr>
                                 <td>{{ $rowbarang->id }}</td>
-                                <td>{{ $rowbarang->merk  }}</td>
-                                <td>{{ $rowbarang->seri  }}</td>
-                                <td>{{ $rowbarang->spesifikasi  }}</td>
-                                <td>{{ $rowbarang->stok  }}</td>
-                                <td>{{ $rowbarang->kategori->kategori  }}</td>
-                                <td>{{ $rowbarang->kategori->jenis  }}</td>
+                                <td>{{ $rowbarang->merk }}</td>
+                                <td>{{ $rowbarang->seri }}</td>
+                                <td>{{ $rowbarang->spesifikasi }}</td>
+                                <td>{{ $rowbarang->stok }}</td>
+                                <td>{{ $rowbarang->kategori->kategori }}</td>
+                                <td>{{ $rowbarang->kategori->jenis }}</td>
                                 <td class="text-center">
                                     <img src="{{ asset('storage/foto/'.$rowbarang->foto) }}" class="rounded" style="width: 150px">
                                 </td>
@@ -70,10 +75,8 @@
                             </div>
                         @endforelse
                     </tbody>
-                   
                 </table>
                 {!! $rsetBarang->links('pagination::bootstrap-5') !!}
-
             </div>
         </div>
     </div>

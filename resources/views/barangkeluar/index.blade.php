@@ -1,25 +1,24 @@
 @extends('layouts.adm-main')
 
-
 @section('content')
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-		<div class="pull-left">
-		    <h2>DAFTAR BARANG KELUAR</h2>
-		</div>
-        @if ($message = Session::get('success'))
-            <div class="alert alert-success">
-                <p>{{ $message }}</p>
-            </div>
-        @endif
+                <div class="pull-left">
+                    <h2>DAFTAR BARANG KELUAR</h2>
+                </div>
+                @if ($message = Session::get('success'))
+                    <div class="alert alert-success">
+                        <p>{{ $message }}</p>
+                    </div>
+                @endif
+
+                <!-- Form Pencarian -->
                 <div class="card">
                     <div class="card-body">
                         <a href="{{ route('barangkeluar.create') }}" class="btn btn-md btn-success mb-3">TAMBAH BARANG KELUAR</a>
                     </div>
-
                 </div>
-
 
                 <table class="table table-bordered">
                     <thead>
@@ -35,11 +34,11 @@
                     <tbody>
                         @forelse ($rsetBarangkeluar as $rowbarangkeluar)
                             <tr>
-                                <td>{{ ++$i }}</td>
-                                <td>{{ $rowbarangkeluar->tgl_keluar  }}</td>
-                                <td>{{ $rowbarangkeluar->qty_keluar  }}</td>
-                                <td>{{ $rowbarangkeluar->barang->merk  }}</td>
-                                <td>{{ $rowbarangkeluar->barang->seri  }}</td>
+                                <td>{{ $rowbarangkeluar->id }}</td>
+                                <td>{{ $rowbarangkeluar->tgl_keluar }}</td>
+                                <td>{{ $rowbarangkeluar->qty_keluar }}</td>
+                                <td>{{ $rowbarangkeluar->barang->merk }}</td>
+                                <td>{{ $rowbarangkeluar->barang->seri }}</td>
                                 <td class="text-center">
                                     <form onsubmit="return confirm('Apakah Anda Yakin ?');" action="{{ route('barangkeluar.destroy', $rowbarangkeluar->id) }}" method="POST">
                                         <a href="{{ route('barangkeluar.show', $rowbarangkeluar->id) }}" class="btn btn-sm btn-dark"><i class="fa fa-eye"></i></a>
@@ -56,10 +55,8 @@
                             </div>
                         @endforelse
                     </tbody>
-                   
                 </table>
                 {!! $rsetBarangkeluar->links('pagination::bootstrap-5') !!}
-
             </div>
         </div>
     </div>
